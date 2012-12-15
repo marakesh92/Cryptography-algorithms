@@ -1,0 +1,126 @@
+import java.io.File;
+import java.io.PrintWriter;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.util.Random;
+
+public class Elgamal {
+
+  static public BigInteger x, m;
+	static public BigInteger p, g, y, one;
+	static public BigInteger k;
+	static public BigInteger a, b;
+	static public Random rng;
+
+	public static void main(String args[]) throws Exception {
+		String M = "q";
+		PrintWriter pw = new PrintWriter(new File("output.txt"));
+		m = new BigInteger("" + getHash(M), 10);
+		//pw.println(m);
+		// m = new BigInteger("5", 10);
+		one = new BigInteger("1");
+		rng = new Random();
+
+		{ // generate -> not secret
+			p = p.probablePrime(15, rng);
+			// p = new BigInteger("11");
+			if (!isPrime(p)) {
+				System.out.println("P = " + p);
+				
+				pw.println(p.toString());
+				
+			} else
+				System.out.println("P in not prime= " + p);
+
+			g = g.probablePrime(14, rng);
+			// g = new BigInteger("2");
+			if (!isPrime(g)) {
+				System.out.println("G = " + g);
+				pw.println(g);
+			} else
+				System.out.println("G in not prime = " + g);
+		}
+		// System.out.println("Enter X: ");
+		x = new BigInteger("8"); // private key
+		System.out.println("X = " + x);
+
+		System.out.println("SHA-256(M) = m = " + m);
+
+		// y - public key to check signature
+		y = g.modPow(x, p);
+		System.out.println("Y = " + y);
+		pw.println(y);
+
+		k = k.probablePrime(14, rng); // сессионый ключ
+		// k = new BigInteger("9");
+
+		while (!k.gcd(p.subtract(one)).equals(one)
+				&& k.compareTo(p.subtract(one)) == -1)
+			k = k.probablePrime(10, rng);
+
+		if (!isPrime(k) && k.gcd(p.subtract(one)).equals(one))
+			System.out.println("K = " + k);
+		else
+			System.out.println("K in not prime = " + k);
+		// k < p-1 so, that gcd(k, (p-1)) = 1
+
+		{ // public key pair S(a, b)
+			a = g.modPow(k, p); // G^K mod Р  = 29 mod 11 = 6
+			System.out.println("A = " + a);
+			pw.println(a);
+			BigInteger kinv = k.modInverse(p.subtract(one));
+			b = (kinv.multiply(m.subtract(x.multiply(a)))).mod(p.subtract(one));
+			
+			System.out.println("B = " + b);
+			pw.print(b);
+		}
+
+		System.out
+				.println("Key S \n a = " + a + " \n b = " + b + "\n Y = " + y);
+	pw.close();
+	}
+
+	public static boolean isPrime(BigInteger n) {
+		for (int i = 0; i < 10; i++) {
+			BigInteger a;
+			do {
+				a = new BigInteger(n.bitLength(), rng);
+			} while (a.equals(BigInteger.ZERO));
+
+			if (!miller_check(a, n)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public static boolean miller_check(BigInteger p, BigInteger a) {
+		BigInteger n = p.subtract(BigInteger.ONE);
+		BigInteger d = n;
+
+		int s = d.getLowestSetBit();
+		d = d.shiftRight(s);
+		BigInteger a_pow = a.modPow(d, n);
+		if (a_pow.equals(BigInteger.ONE))
+			return true;
+
+		if (a_pow.equals(n))
+			return true;
+
+		return false;
+	}
+
+	public static String getHash(String input) throws Exception {
+		MessageDigest md = MessageDigest.getInstance("SHA-256");
+		md.update(input.getBytes());
+		byte byteData[] = md.digest();
+
+		StringBuffer sb = new StringBuffer();
+		for (int i = 0; i < byteData.length; i++) {
+			sb.append(Integer.toString((byteData[i] & 0xff) + 0x100, 10)
+					.substring(1));
+		}
+		return sb.toString();
+	}
+
+}
